@@ -1,12 +1,15 @@
 """Calculator"""
+import traceback
 
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QApplication, QMainWindow, QButtonGroup
 from PySide6.QtCore import QRect, QPropertyAnimation, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QSize, QEvent
 # from PySide6.QtCore import QSizeGrip
 from ui_calculator import Ui_MainWindow
 from gui_calculator import Calculator
+
+from sexagesimal import to_sexagesimal
 
 # pyside6-uic calculator.ui -o ui_calculator.py
 # pyside6-designer
@@ -28,6 +31,15 @@ class CalculatorWindow(QMainWindow):
         self.ui.frame.move(0, 0)
         self.ui.frame_2.setGeometry(0, 0, calc_w, calc_h)
         self.setFixedSize(calc_w, calc_h)
+
+        self.ui.radioButton_decimal.setChecked(True)
+
+        self.rbgroup = QButtonGroup(self)
+        self.rbgroup.addButton(self.ui.radioButton_decimal)
+        self.rbgroup.addButton(self.ui.radioButton_octal)
+        self.rbgroup.addButton(self.ui.radioButton_hexidecimal)
+        self.rbgroup.addButton(self.ui.radioButton_binary)
+        self.rbgroup.addButton(self.ui.radioButton_base60)
 
         menu_w = self.ui.menu_frame.width()
         hist_w = self.ui.history_frame.width()
@@ -616,6 +628,14 @@ class CalculatorWindow(QMainWindow):
 
         try:
             result = self.calculator.calculate_expression(expression)
+
+            if self.ui.radioButton_octal.isChecked():
+                result = oct(int(result))
+            elif self.ui.radioButton_hexidecimal.isChecked():
+                result = hex(int(result))
+            elif self.ui.radioButton_base60.isChecked():
+                result = to_sexagesimal(int(result))
+
             history_text = f"{expression} = {result}"
             self.calculator.history.append(history_text)
             self.calculator.save_history(history_text)
@@ -625,6 +645,10 @@ class CalculatorWindow(QMainWindow):
 
         except (ZeroDivisionError, SyntaxError, NameError, ValueError):
             self.show_error()
+            print(traceback.format_exc())
+        except Exception as e:
+            self.show_error()
+            # print(traceback.format_exc())
 
     # =================================================================
     def connect_buttons(self):
