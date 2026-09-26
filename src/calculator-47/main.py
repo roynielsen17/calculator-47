@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Calculator"""
 import traceback
 
@@ -9,7 +11,7 @@ from PySide6.QtCore import QSize, QEvent
 from ui_calculator import Ui_MainWindow
 from gui_calculator import Calculator
 
-from sexagesimal import to_sexagesimal
+from sexagesimal import to_sexagesimal, from_sexagesimal
 
 # pyside6-uic calculator.ui -o ui_calculator.py
 # pyside6-designer
@@ -32,7 +34,11 @@ class CalculatorWindow(QMainWindow):
         self.ui.frame_2.setGeometry(0, 0, calc_w, calc_h)
         self.setFixedSize(calc_w, calc_h)
 
+        ["dec", "oct", "hex", "bin", "sexagesimal"]
+
         self.ui.radioButton_decimal.setChecked(True)
+
+        self.lastRadioButtonSelected = "Dec"
 
         self.rbgroup = QButtonGroup(self)
         self.rbgroup.addButton(self.ui.radioButton_decimal)
@@ -40,6 +46,8 @@ class CalculatorWindow(QMainWindow):
         self.rbgroup.addButton(self.ui.radioButton_hexidecimal)
         self.rbgroup.addButton(self.ui.radioButton_binary)
         self.rbgroup.addButton(self.ui.radioButton_base60)
+
+        self.rbgroup.buttonToggled.connect(self.on_radioButtonChanged)
 
         menu_w = self.ui.menu_frame.width()
         hist_w = self.ui.history_frame.width()
@@ -145,6 +153,73 @@ class CalculatorWindow(QMainWindow):
         self.button_animations = []
 
         self.connect_buttons()
+
+    # =================================================================
+    def on_radioButtonChanged(self, button, checked):
+        """
+        Slot - for managing the state of the output to the selected
+        display type state
+        """
+        result = self.ui.display.text()
+
+        selected = self.rbgroup.checkedButton()
+        if selected is not None:
+            print(f"selected text: {selected.text()}")
+            buttonText = selected.text().strip()
+            print(f"buttonText: {buttonText}")
+
+            if self.lastRadioButtonSelected != buttonText:
+                if buttonText == "Dec":
+                    if self.lastRadioButtonSelected == "Sexagesimal":
+                        tmp = from_sexagesimal(result)
+                        result = int(tmp)
+                    elif self.lastRadioButtonSelected == "Oct":
+                        result = int(result, 8)
+                    elif self.lastRadioButtonSelected == "Hex":
+                        result = int(result, 16)
+                    else:
+                        result = int(result)
+                    self.lastRadioButtonSelected = "Dec"
+                elif buttonText == "Oct":
+                    if self.lastRadioButtonSelected == "Sexagesimal":
+                        tmp = from_sexagesimal(result)
+                        result = oct(tmp)
+                    elif self.lastRadioButtonSelected == "Dec":
+                        result = oct(int(result))
+                    elif self.lastRadioButtonSelected == "Hex":
+                        result = oct(int(result, 16))
+
+                    else:
+                        result = oct(int(result))
+                    self.lastRadioButtonSelected = "Oct"
+                elif buttonText == "Hex":
+                    if self.lastRadioButtonSelected == "Sexagesimal":
+                        tmp = from_sexagesimal(result)
+                        result = hex(tmp)
+                    elif self.lastRadioButtonSelected == "Dec":
+                        result = hex(int(result))
+                    elif self.lastRadioButtonSelected == "Oct":
+                        result = hex(int(result, 8))
+                    else:
+                        result = hex(int(result))
+                    self.lastRadioButtonSelected = "Hex"
+                elif buttonText == "Sexagesimal":
+                    try:
+                        if self.lastRadioButtonSelected == "Dec":
+                            result = to_sexagesimal(int(result))
+                        elif self.lastRadioButtonSelected == "Oct":
+                            result = to_sexagesimal(int(result, 8))
+                        elif self.lastRadioButtonSelected == "Hex":
+                            result = to_sexagesimal(int(result, 16))
+                        self.lastRadioButtonSelected = "Sexagesimal"
+                    except ValueError:
+                        print(traceback.format_exc())
+
+            self.ui.display.setText(str(result))
+
+
+
+
 
     # =================================================================
     def setup_button_styles(self):
@@ -628,14 +703,25 @@ class CalculatorWindow(QMainWindow):
 
         try:
             result = self.calculator.calculate_expression(expression)
-
+            """
             if self.ui.radioButton_octal.isChecked():
-                result = oct(int(result))
+                if self.lastRadioButtonSelected == "sexagesimal":
+                    tmp = from_sexigagesimal(result)
+                    result = oct(int(tmp))
+                else:
+                    result = oct(int(result))
+                self.lastRadioButtonSelected == "oct"
             elif self.ui.radioButton_hexidecimal.isChecked():
-                result = hex(int(result))
+                if self.lastRadioButtonSelected == "sexagesimal":
+                    tmp = from_sexigagesimal(result)
+                    result = hex(int(tmp))
+                else:
+                    result = hex(int(result))
+                self.lastRadioButtonSelected == "hex"
             elif self.ui.radioButton_base60.isChecked():
                 result = to_sexagesimal(int(result))
-
+                self.lastRadioButtonSelected("sexigesimal")
+            """
             history_text = f"{expression} = {result}"
             self.calculator.history.append(history_text)
             self.calculator.save_history(history_text)
